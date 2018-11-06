@@ -17,7 +17,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netdb.h> 
+#include <netdb.h>
 
 #include <bcm2835.h>
 #include <stdio.h>
@@ -39,12 +39,13 @@
 #define END_OF_HTTP_REQ            "\r\n\r\n"
 #define MAX_SIZE                   9999
 
+#define LED_PIN RPI_V2_GPIO_P1_12 // or change in RasPiBoards.h
 // define hardware used change to fit your need
-// Uncomment the board you have, if not listed 
+// Uncomment the board you have, if not listed
 // uncommment custom board and set wiring tin custom section
 
 
-// LoRasPi board 
+// LoRasPi board
 // see https://github.com/hallard/LoRasPI
 //#define BOARD_LORASPI
 
@@ -56,7 +57,7 @@
 // see https://github.com/ch2i/iC880A-Raspberry-PI
 //#define BOARD_IC880A_PLATE
 
-// Raspberri PI Lora Gateway for multiple modules 
+// Raspberri PI Lora Gateway for multiple modules
 // see https://github.com/hallard/RPI-Lora-Gateway
 //#define BOARD_PI_LORA_GATEWAY
 
@@ -64,11 +65,11 @@
 // see https://github.com/dragino/Lora
 //#define BOARD_DRAGINO_PIHAT
 
-// Now we include RasPi_Boards.h so this will expose defined 
+// Now we include RasPi_Boards.h so this will expose defined
 // constants with CS/IRQ/RESET/on board LED pins definition
 #include "../RasPiBoards.h"
 
-// Our RFM95 Configuration 
+// Our RFM95 Configuration
 #define RF_FREQUENCY  915.00
 #define RF_NODE_ID    0
 
@@ -91,54 +92,54 @@ char SendDataToThingSpeak(int FieldNo, float* FieldArray, char * Key, int SizeOf
 	char BeginOfHTTPReq[]=BEGIN_OF_HTTP_REQ;
 	char EndOfHTTPReq[]=END_OF_HTTP_REQ;
 	char *ptReqString;
-	
+
 	if (FieldNo <=0)
 		return PARAMS_ERROR;
-	
+
 	//Setting up HTTP Req. string:
 	bzero(&ReqString,sizeof(ReqString));
 	sprintf(ReqString,"%s%s",BeginOfHTTPReq,Key);
-	
+
 	ptReqString = &ReqString[0]+(int)strlen(ReqString);
 	for(i=1; i<= FieldNo; i++)
 	{
 		sprintf(ptReqString,"&field%d=%.2f",i,FieldArray[i-1]);
 		ptReqString = &ReqString[0]+(int)strlen(ReqString);
 	}
-	
+
 	sprintf(ptReqString,"%s",EndOfHTTPReq);
 	printf("%s",EndOfHTTPReq);
 	//Connecting to ThingSpeak and sending data:
 	portno = PORT_THINGSPEAK;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    
+
 	//Step 1: opening a socket
 	if (sockfd < 0)
 		return OPEN_SOCKET_ERROR;
-	
+
 	//Step 2: check if ThingSpeak is online
 	ServerTCP = gethostbyname(URL_THINGSPEAK);
-	if (ServerTCP == NULL) 
+	if (ServerTCP == NULL)
 	    return THINGSPEAK_OFFLINE_ERROR;
-    
+
 	//Step 3: setting up TCP/IP socket structure
     bzero((char *) &serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
-    bcopy((char *)ServerTCP->h_addr, 
+    bcopy((char *)ServerTCP->h_addr,
          (char *)&serv_addr.sin_addr.s_addr,
          ServerTCP->h_length);
     serv_addr.sin_port = htons(portno);
-    
+
 	//Step 4: connecting to ThingSpeak server (via HTTP port / port no. 80)
-	if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
+	if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
 		return THINGSPEAK_CONNECTION_ERROR;
-	
+
 	//Step 5: sending data to ThingSpeak's channel
     write(sockfd,ReqString,strlen(ReqString));
-		
+
 	//Step 6: close TCP connection
-    close(sockfd);    
-	
+    close(sockfd);
+
 	//All done!
 	return SEND_OK;
 }
@@ -163,9 +164,9 @@ int main (int argc, const char* argv[] )
   float fsoilmoist;
   float flight;
   float ftemp;
-  
+
   unsigned long led_blink = 0;
-  
+
   signal(SIGINT, sig_handler);
   //printf( "%s\n", __BASEFILE__);
 
@@ -173,7 +174,7 @@ int main (int argc, const char* argv[] )
     fprintf( stderr, "%s bcm2835_init() Failed\n\n", __BASEFILE__ );
     return 1;
   }
-  
+
   //printf( "RF95 CS=GPIO%d", RF_CS_PIN);
 
 #ifdef RF_LED_PIN
@@ -189,7 +190,7 @@ int main (int argc, const char* argv[] )
   // Now we can enable Rising edge detection
   bcm2835_gpio_ren(RF_IRQ_PIN);
 #endif
-  
+
 #ifdef RF_RST_PIN
   //printf( ", RST=GPIO%d", RF_RST_PIN );
   // Pulse a reset on module
@@ -211,12 +212,12 @@ int main (int argc, const char* argv[] )
     // Defaults after init are 434.0MHz, 13dBm, Bw = 125 kHz, Cr = 4/5, Sf = 128chips/symbol, CRC on
 
     // The default transmitter power is 13dBm, using PA_BOOST.
-    // If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then 
+    // If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then
     // you can set transmitter powers from 5 to 23 dBm:
     //  driver.setTxPower(23, false);
     // If you are using Modtronix inAir4 or inAir9,or any other module which uses the
     // transmitter RFO pins and not the PA_BOOST pins
-    // then you can configure the power transmitter power for -1 to 14 dBm and with useRFO true. 
+    // then you can configure the power transmitter power for -1 to 14 dBm and with useRFO true.
     // Failure to do that will result in extremely low transmit powers.
     // rf95.setTxPower(14, true);
 
@@ -232,12 +233,12 @@ int main (int argc, const char* argv[] )
 
     // Adjust Frequency
     rf95.setFrequency(RF_FREQUENCY);
-    
+
     // If we need to send something
     rf95.setThisAddress(RF_NODE_ID);
     rf95.setHeaderFrom(RF_NODE_ID);
-    
-    // Be sure to grab all node packet 
+
+    // Be sure to grab all node packet
     // we're sniffing to display, it's a demo
     rf95.setPromiscuous(true);
 
@@ -249,11 +250,11 @@ int main (int argc, const char* argv[] )
 
     //Begin the main body of code
     while (!force_exit) {
-      
+
 #ifdef RF_IRQ_PIN
       // We have a IRQ pin ,pool it instead reading
       // Modules IRQ registers from SPI in each loop
-      
+
       // Rising edge fired ?
       if (bcm2835_gpio_eds(RF_IRQ_PIN)) {
         // Now clear the eds flag by setting it to 1
@@ -261,7 +262,7 @@ int main (int argc, const char* argv[] )
         //printf("Packet Received, Rising event detect for pin GPIO%d\n", RF_IRQ_PIN);
 #endif
 
-        if (rf95.available()) { 
+        if (rf95.available()) {
 #ifdef RF_LED_PIN
           led_blink = millis();
           digitalWrite(RF_LED_PIN, HIGH);
@@ -274,37 +275,39 @@ int main (int argc, const char* argv[] )
           uint8_t id   = rf95.headerId();
           uint8_t flags= rf95.headerFlags();;
           int8_t rssi  = rf95.lastRssi();
-          
+
           if (rf95.recv(buf, &len)) {
             printf("Packet[%02d] #%d => #%d %ddB: ", len, from, to, rssi);
             printbuffer(buf, len);
-            
+
             //strcpy(data,buf);
             for (int i=0;i<len;i++){
             data[i] = buf[i];
-            printf("%c",data[i]);    
+            printf("%c",data[i]);
             }
             sscanf(data,"%f %f %f", &fsoilmoist, &ftemp, &flight);
             printf("\n%f and %f or %f", flight, ftemp, fsoilmoist);
-            
+
             float uploaddata[] = {fsoilmoist,ftemp,flight} ;
-            
+
             SendDataToThingSpeak(no_field, uploaddata,key,sizeofkey);
             //delay(10000);
             printf("\ndone");
-            
 
-
-          } else {
+                if ( fsoilmoist < 30) {
+                   digitalWrite( LED_PIN , HIGH); // LED lights up when soil moisture less than 30%
+                }
+            }
+            else {
             Serial.print("receive failed");
           }
           printf("\n");
         }
-        
+
 #ifdef RF_IRQ_PIN
       }
 #endif
-      
+
 #ifdef RF_LED_PIN
       // Led blink timer expiration ?
       if (led_blink && millis()-led_blink>200) {
